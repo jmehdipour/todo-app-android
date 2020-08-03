@@ -16,9 +16,9 @@ import com.idescout.sql.SqlScoutServer;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements AddTaskDialog.AddNewTaskCallback, TaskAdapter.TaskItemEventListener, EditTaskDialog.EditTaskCallback {
-    private SqLiteHelper sqLiteHelper;
     private static final String TAG = "MainActivity";
     private TaskAdapter taskAdapter = new TaskAdapter(this);
+    private TaskDao taskDao;
 
 
     @Override
@@ -26,12 +26,9 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         SqlScoutServer.create(this, getPackageName());
-        sqLiteHelper = new SqLiteHelper(this);
-        final Task task = new Task();
-        task.setTitle("test title");
-        task.setCompleted(false);
-        long result = sqLiteHelper.addTask(task);
-        Log.i(TAG, "onCreate: "+ result);
+        //sqLiteHelper = new SqLiteHelper(this);
+
+        taskDao = AppDatabase.getAppDatabase(this).getTaskDao();
 
         RecyclerView recyclerView = findViewById(R.id.rv_main_tasks);
         recyclerView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
@@ -47,10 +44,10 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.length() > 0){
-                    List<Task> tasks = sqLiteHelper.searchInTasks(charSequence.toString());
+                    List<Task> tasks = taskDao.searchInTasks(charSequence.toString());
                     taskAdapter.setItems(tasks);
                 }else{
-                    List<Task> tasks = sqLiteHelper.getTasks();
+                    List<Task> tasks = taskDao.getTasks();
                     taskAdapter.setItems(tasks);
                 }
             }
@@ -62,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
         });
 
 
-        List<Task> tasks = sqLiteHelper.getTasks();
+        List<Task> tasks = taskDao.getTasks();
         taskAdapter.addItems(tasks);
 
         View addNewTaskFab = findViewById(R.id.fab_main_addNewTask);
@@ -78,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
         clearTasksBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                sqLiteHelper.clearAllTasks();
+                taskDao.deleteAll();
                 taskAdapter.clearItems();
             }
         });
@@ -86,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
 
     @Override
     public void onNewTask(Task task) {
-        long taskId = sqLiteHelper.addTask(task);
+        long taskId = taskDao.add(task);
         if (taskId != -1){
             task.setId(taskId);
             taskAdapter.addItem(task);
@@ -98,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
 
     @Override
     public void onDeleteButtonClicked(Task task) {
-        int result = sqLiteHelper.deleteTask(task);
+        int result = taskDao.delete(task);
         if (result>0){
             taskAdapter.removeItem(task);
         }
@@ -116,12 +113,12 @@ public class MainActivity extends AppCompatActivity implements AddTaskDialog.Add
 
     @Override
     public void onItemCheckedChange(Task task) {
-        sqLiteHelper.updateTask(task);
+        taskDao.update(task);
     }
 
     @Override
     public void onEditTask(Task task) {
-        int result = sqLiteHelper.updateTask(task);
+        int result = taskDao.update(task);
         if (result > 0){
             taskAdapter.updateItem(task);
         }
